@@ -76,16 +76,15 @@ class ClickupConnector(DocumentConnector):
             }
             response = requests.get(f"{BASE_URL}/v2/team", headers=headers)
 
-            if response.status_code == 200:
-                # Print the response data
-                res = response.json()
-                team_ids = [team["id"] for team in res["teams"]]
-                team_ids_str = json.dumps(team_ids)
-                if len(team_ids) < 1:
-                    raise Exception("No workspaces found")
-            else:
+            if response.status_code != 200:
                 raise Exception("Couldn't fetch workspaces")
 
+            # Print the response data
+            res = response.json()
+            team_ids = [team["id"] for team in res["teams"]]
+            team_ids_str = json.dumps(team_ids)
+            if not team_ids:
+                raise Exception("No workspaces found")
         except Exception as e:
             raise Exception(f"Unable to load workspaces from Clickup due to error: {e}")
 
@@ -223,18 +222,18 @@ class ClickupConnector(DocumentConnector):
 
             for task in tasks:
                 content = f"Path: {path}{task['name']}\n\n"
-                content + f"Name: {task['name']}\n"
-                content + f"Content: {task['text_content']}\n"
-                content + f"Description: {task['description']}\n"
-                content + f"Status: {task['status']}\n"
-                content + f"Date created: {task['date_created']}\n"
-                content + f"Date updated: {task['date_updated']}\n"
-                content + f"Date closed: {task['date_closed']}\n"
-                content + f"Assignees: {','.join(task['assignees'])}\n"
-                content + f"Checklists: {','.join(task['checklists'])}\n"
-                content + f"Tags: {','.join(task['tags'])}\n"
-                content + f"Due date: {task['due_date']}\n"
-                content + f"Url: {task['url']}\n"
+                f"{content}Name: {task['name']}\n"
+                f"{content}Content: {task['text_content']}\n"
+                f"{content}Description: {task['description']}\n"
+                f"{content}Status: {task['status']}\n"
+                f"{content}Date created: {task['date_created']}\n"
+                f"{content}Date updated: {task['date_updated']}\n"
+                f"{content}Date closed: {task['date_closed']}\n"
+                f"{content}Assignees: {','.join(task['assignees'])}\n"
+                f"{content}Checklists: {','.join(task['checklists'])}\n"
+                f"{content}Tags: {','.join(task['tags'])}\n"
+                f"{content}Due date: {task['due_date']}\n"
+                f"{content}Url: {task['url']}\n"
                 docs.append(
                     Document(
                         title=task["name"],

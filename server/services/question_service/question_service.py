@@ -46,7 +46,7 @@ class QuestionService:
         ]
         embeddings = OpenAIEmbeddings(openai_api_key=self.openai_api_key)
         # Limit to 1000 document chunks since we use a transient local chroma instance
-        vdb = Chroma.from_documents(documents[0:1000], embeddings)
+        vdb = Chroma.from_documents(documents[:1000], embeddings)
         chain = RetrievalQAWithSourcesChain.from_chain_type(
             OpenAI(openai_api_key=self.openai_api_key, temperature=0),
             chain_type="stuff",

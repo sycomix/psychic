@@ -16,21 +16,17 @@ class SlackParser:
         self.slack_workspace_base_url = None
 
     def get_slack_permalink(self, channel_id: str, message_id: str) -> str:
-        if not self.slack_workspace_base_url:
-            link = self.client.chat_getPermalink(
-                channel=channel_id, message_ts=message_id
-            )
-            # base url is everything before /archives
-            self.slack_workspace_base_url = link["permalink"].split("/archives")[0]
-            return link["permalink"]
-        else:
+        if self.slack_workspace_base_url:
             return (
-                self.slack_workspace_base_url
-                + "/archives/"
-                + channel_id
-                + "/p"
+                f"{self.slack_workspace_base_url}/archives/{channel_id}/p"
                 + message_id.replace(".", "")
             )
+        link = self.client.chat_getPermalink(
+            channel=channel_id, message_ts=message_id
+        )
+        # base url is everything before /archives
+        self.slack_workspace_base_url = link["permalink"].split("/archives")[0]
+        return link["permalink"]
 
     def parse_message(self, message: Dict, channel: Dict) -> List[Message]:
         link = self.get_slack_permalink(channel["id"], message["ts"])
@@ -43,7 +39,6 @@ class SlackParser:
             user_name = user["name"]
             self.users_cache[user_id] = user_name
 
-        msgs = []
         content = {
             "sender": MessageSender(id=message["user"], name=user_name).dict(),
             "recipients": [
@@ -53,14 +48,13 @@ class SlackParser:
             "timestamp": message["ts"],
             "replies": [],
         }
-        msgs.append(
+        msgs = [
             Message(
                 id=message["ts"],
                 content=yaml.dump(content, sort_keys=False),
                 uri=link,
             )
-        )
-
+        ]
         # If this message started a thread, fetch the replies
         if "thread_ts" in message:
             response = self.client.conversations_replies(
@@ -92,15 +86,13 @@ class SlackParser:
         html = "<div>"
         blocks = message["blocks"]
         if not blocks:
-            return html + "</div>"
+            return f"{html}</div>"
 
         for block in blocks:
             type = block.get("type")
             if type == "rich_text":
-                elements = block.get("elements")
-                if not elements:
-                    continue
-                html += self.parse_rich_text_elements(elements)
+                if elements := block.get("elements"):
+                    html += self.parse_rich_text_elements(elements)
 
         html += "</div>"
         return html
@@ -118,8 +110,7 @@ class SlackParser:
                 html += element["text"]
                 i += 1
             elif element["type"] == "link":
-                link_text = element.get("text")
-                if link_text:
+                if link_text := element.get("text"):
                     html += "<a href='" + element["url"] + "'>" + link_text + "</a>"
                 else:
                     html += (
@@ -135,27 +126,19 @@ class SlackParser:
         return html
 
     def parse_rich_text_list(self, elements: Dict, i):
-        html = ""
         first_element = elements[i]
         assert first_element["type"] == "rich_text_list"
         unordered = first_element["style"] == "bullet"
 
-        if unordered:
-            html += "<ul>"
-        else:
-            html += "<ol>"
-
+        html = "" + ("<ul>" if unordered else "<ol>")
         while (
             i < len(elements)
             and elements[i]["type"] == "rich_text_list"
             and elements[i]["style"] == first_element["style"]
         ):
             nested_elements = elements[i]["elements"]
-            html += "<li>" + self.parse_rich_text_elements(nested_elements) + "</li>"
+            html += f"<li>{self.parse_rich_text_elements(nested_elements)}</li>"
             i += 1
 
-        if unordered:
-            html += "</ul>"
-        else:
-            html += "</ol>"
+        html += "</ul>" if unordered else "</ol>"
         return html, i

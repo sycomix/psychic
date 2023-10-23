@@ -55,7 +55,9 @@ class IntercomConnector(DocumentConnector):
             }
 
             response = requests.post(
-                f"https://api.intercom.io/auth/eagle/token", headers=headers, json=data
+                "https://api.intercom.io/auth/eagle/token",
+                headers=headers,
+                json=data,
             )
 
             creds = response.json()

@@ -44,7 +44,7 @@ class NotionConnector(DocumentConnector):
             client_secret = connector_credentials["client_secret"]
 
             redirect_uri = connector_credentials["redirect_uri"]
-            authorization_url = f"https://api.notion.com/v1/oauth/authorize"
+            authorization_url = "https://api.notion.com/v1/oauth/authorize"
             params = {
                 "response_type": "code",
                 "redirect_uri": redirect_uri,
@@ -190,17 +190,16 @@ class NotionConnector(DocumentConnector):
 
             for section in sections:
                 items = parser.get_documents_in_section(section.id)
-                for item in items:
-                    all_notion_documents.append(
-                        Document(
-                            title=item["title"],
-                            content=item["content"],
-                            uri=item["uri"],
-                            connector_id=self.connector_id,
-                            account_id=account_id,
-                        )
+                all_notion_documents.extend(
+                    Document(
+                        title=item["title"],
+                        content=item["content"],
+                        uri=item["uri"],
+                        connector_id=self.connector_id,
+                        account_id=account_id,
                     )
-
+                    for item in items
+                )
             return all_notion_documents
         else:
             search_params = {}

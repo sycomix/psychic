@@ -123,7 +123,7 @@ class ConfluenceConnector(DocumentConnector):
             authorized_site = requests.get(
                 "https://api.atlassian.com/oauth/token/accessible-resources",
                 headers={
-                    "Authorization": "Bearer " + access_token,
+                    "Authorization": f"Bearer {access_token}",
                     "Accept": "application/json",
                 },
             ).json()[0]
@@ -164,7 +164,7 @@ class ConfluenceConnector(DocumentConnector):
             authorized_site = requests.get(
                 "https://api.atlassian.com/oauth/token/accessible-resources",
                 headers={
-                    "Authorization": "Bearer " + access_token,
+                    "Authorization": f"Bearer {access_token}",
                     "Accept": "application/json",
                 },
             ).json()[0]
@@ -175,7 +175,7 @@ class ConfluenceConnector(DocumentConnector):
         spaces = requests.get(
             f"https://api.atlassian.com/ex/confluence/{cloud_id}/rest/api/space",
             headers={
-                "Authorization": "Bearer " + access_token,
+                "Authorization": f"Bearer {access_token}",
                 "Accept": "application/json",
             },
         ).json()
@@ -184,15 +184,15 @@ class ConfluenceConnector(DocumentConnector):
 
         documents = []
 
+        limit = 25
         for space in spaces["results"]:
             start_at = 0
-            limit = 25
             space_key = space["key"]
             while True:
                 pages_response = requests.get(
                     f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/rest/api/content?spaceKey={space_key}&limit=25&start={start_at}&expand=body.storage&type=page",
                     headers={
-                        "Authorization": "Bearer " + access_token,
+                        "Authorization": f"Bearer {access_token}",
                         "Accept": "application/json",
                     },
                 )

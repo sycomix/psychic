@@ -54,18 +54,12 @@ class SlackConnector(ConversationConnector):
                 redirect_uri=redirect_uri,
             )
             oauth_data = oauth_response.data
-            team = oauth_data.get("team")
-            if team:
-                team_name = team.get("name")
+            team_name = team.get("name") if (team := oauth_data.get("team")) else ""
+            if access_token := oauth_data.get("access_token"):
+                creds_string = json.dumps(oauth_data)
+
             else:
-                team_name = ""
-
-            access_token = oauth_data.get("access_token")
-
-            if not access_token:
                 raise Exception("Unable to get access token with code")
-
-            creds_string = json.dumps(oauth_data)
 
         except Exception as e:
             print(e)

@@ -107,15 +107,15 @@ class ZendeskParser:
             parsed_comments = []
             # the first comment is just the description of the ticket so we skip it
             if len(comments) > 1:
-                for comment in comments[1:]:
-                    parsed_comments.append(
-                        {
-                            "author": "Customer"
-                            if comment["author_id"] == customer_id
-                            else "Agent",
-                            "content": comment["body"],
-                        }
-                    )
+                parsed_comments.extend(
+                    {
+                        "author": "Customer"
+                        if comment["author_id"] == customer_id
+                        else "Agent",
+                        "content": comment["body"],
+                    }
+                    for comment in comments[1:]
+                )
             content_ison["comments"] = parsed_comments
             content_yaml = yaml.dump(content_ison, sort_keys=False)
 
@@ -169,15 +169,14 @@ class ZendeskParser:
 
     def call_zendesk_api(self, url):
         if self.is_oauth:
-            response = requests.get(
+            return requests.get(
                 url, headers={"Authorization": f"Bearer {self.access_token}"}
             )
         else:
-            if self.email and self.api_key:
-                response = requests.get(url, auth=(self.email + "/token", self.api_key))
-            else:
-                response = requests.get(
+            return (
+                requests.get(url, auth=(f"{self.email}/token", self.api_key))
+                if self.email and self.api_key
+                else requests.get(
                     url, headers={"Authorization": f"Basic {self.access_token}"}
                 )
-
-        return response
+            )

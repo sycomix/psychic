@@ -33,7 +33,7 @@ class GoogleDriveParser:
 
     def get_file_by_id(self, id: str) -> Any:
         try:
-            file = (
+            return (
                 self.service.files()
                 .get(
                     fileId=id,
@@ -42,7 +42,6 @@ class GoogleDriveParser:
                 )
                 .execute()
             )
-            return file
         except Exception as e:
             print(e)
             return None
@@ -70,8 +69,7 @@ class GoogleDriveParser:
                     )
                     .execute()
                 )
-            items = results.get("files", [])
-            return items
+            return results.get("files", [])
         except Exception as e:
             print(e)
             return []
@@ -140,10 +138,7 @@ class GoogleDriveParser:
             folder_id = section.id
         else:
             file = self.get_file_by_id(section.id)
-            if not file:
-                return []
-            return [file]
-
+            return [] if not file else [file]
         folders_to_process = deque([folder_id])
         files = []
         while folders_to_process:
@@ -175,8 +170,4 @@ class GoogleDriveParser:
         return files
 
     def get_id_from_uri(self, uri: str):
-        # Extract the file id from the url
-        # the id comes after /d/ and before the next /
-
-        id = re.search(r"/d/([^/]+)", uri).group(1)
-        return id
+        return re.search(r"/d/([^/]+)", uri).group(1)

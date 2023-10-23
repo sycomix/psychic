@@ -45,10 +45,7 @@ class DropboxConnector(DataConnector):
         response = requests.post(
             f"{BASE_URL}/2/check/user", headers=headers, json=json_data
         )
-        if response.status_code == 200:
-            return True
-        else:
-            return False
+        return response.status_code == 200
 
     async def authorize_api_key(self) -> AuthorizationResult:
         pass
@@ -130,11 +127,10 @@ class DropboxConnector(DataConnector):
         }
 
         response = requests.post("https://api.dropbox.com/oauth2/token", data=data)
-        if response.status_code == 200:
-            res_data = response.json()
-            return res_data.get("access_token")
-        else:
+        if response.status_code != 200:
             return None
+        res_data = response.json()
+        return res_data.get("access_token")
 
     def get_all_files_under_folder(self, access_token: str):
         headers = {
@@ -191,8 +187,7 @@ class DropboxConnector(DataConnector):
             "https://content.dropboxapi.com/2/files/download", headers=headers
         )
         if response.status_code == 200:
-            content = response.content
-            if content:
+            if content := response.content:
                 text = ""
                 if file_type == "pdf":
                     bytes_data = BytesIO(content)
@@ -202,7 +197,7 @@ class DropboxConnector(DataConnector):
                         page_text = page.extract_text()
                         text += page_text
 
-                elif file_type == "docx" or file_type == "doc":
+                elif file_type in {"docx", "doc"}:
                     bytes_data = BytesIO(content)
                     doc = docx.Document(bytes_data)
                     for p in doc.paragraphs:
@@ -233,18 +228,18 @@ class DropboxConnector(DataConnector):
         try:
             result = self.get_all_files_under_folder(access_token)
             if "error" in result:
-                if result.get("error") == DropboxError.expired_access_token:
-                    access_token = self.get_new_access_token(refresh_token)
-                    result = self.get_all_files_under_folder(access_token)
-                else:
+                if result.get("error") != DropboxError.expired_access_token:
                     raise Exception("Error in getting files")
+                access_token = self.get_new_access_token(refresh_token)
+                result = self.get_all_files_under_folder(access_token)
             files = result.get("results")
         except Exception as e:
             raise e
 
         for file_name, file_path, file_type in files:
-            text = self.extract_text_from_document(access_token, file_path, file_type)
-            if text:
+            if text := self.extract_text_from_document(
+                access_token, file_path, file_type
+            ):
                 documents.append(
                     Document(
                         title=file_name,

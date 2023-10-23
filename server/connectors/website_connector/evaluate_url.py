@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 def get_full_doc_url(root_scheme: str, root_host: str, path: str):
-    return root_scheme + "://" + root_host.strip("/") + "/" + path.strip("/")
+    return f"{root_scheme}://" + root_host.strip("/") + "/" + path.strip("/")
 
 
 ## Decide if we should treat this url as a document. If so, return the relative path of the url.
@@ -17,23 +17,17 @@ def evaluate_url(
 
     # if this url is relative to the scheme or root host, reconstruct the full url
     if url.startswith("//"):
-        parsed = urlparse(root_scheme + ":" + url)
+        parsed = urlparse(f"{root_scheme}:{url}")
     elif url.startswith("/"):
-        parsed = urlparse(root_scheme + "://" + root_host + url)
+        parsed = urlparse(f"{root_scheme}://{root_host}{url}")
 
     # if this url is relative to a page, convert it to the full url based on the url of the page that contained this link
     if not parsed.hostname:
         path = Path(url)
         parent_path = Path(urlparse(parent_url).path)
-        if parent_url.endswith("html"):
-            new_path = parent_path.parent
-        else:
-            new_path = parent_path
+        new_path = parent_path.parent if parent_url.endswith("html") else parent_path
         for part in path.parts:
-            if part == "..":
-                new_path = new_path.parent
-            else:
-                new_path = new_path / part
+            new_path = new_path.parent if part == ".." else new_path / part
         final_url = get_full_doc_url(root_scheme, root_host, str(new_path))
         parsed = urlparse(final_url)
 

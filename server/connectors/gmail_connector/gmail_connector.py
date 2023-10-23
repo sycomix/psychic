@@ -92,13 +92,12 @@ class GmailConnector(ConversationConnector):
                 userId="me",
                 maxResults=100,
                 pageToken=page_cursor,
-                q="after: {}".format(oldest_message_time),
+                q=f"after: {oldest_message_time}",
             )
             .execute()
         )
         if "threads" in result:
-            for thread in result["threads"]:
-                thread_ids.append(thread["id"])
+            thread_ids.extend(thread["id"] for thread in result["threads"])
         if "nextPageToken" in result:
             return thread_ids, result["nextPageToken"]
         else:
@@ -127,8 +126,7 @@ class GmailConnector(ConversationConnector):
                 print(e)
                 continue
 
-        first_email = self._parse_message(first_msg, replies)
-        return first_email
+        return self._parse_message(first_msg, replies)
 
     def _parse_message(
         self, msg: Dict, replies: Optional[List[Message]] = []
@@ -136,11 +134,7 @@ class GmailConnector(ConversationConnector):
         payload = msg.get("payload")
         headers = payload.get("headers")
 
-        # only need ID if this is the first message in the thread. if it has replies, ignore id
-        id = None
-        if replies:
-            id = msg.get("id")
-
+        id = msg.get("id") if replies else None
         sender = None
         recipients = []
         subject = ""
@@ -189,14 +183,13 @@ class GmailConnector(ConversationConnector):
             body = part.get("body")
             # TODO handle downloading attachments
             if mimeType == "text/plain":
-                data = body.get("data")
-                if data:
+                if data := body.get("data"):
                     padding = 4 - (len(data) % 4)
                     data = str(data) + "=" * padding
                     decoded_content = base64.urlsafe_b64decode(data).decode("utf-8")
-                    # Gmail adds replies to the content, we need to manually remove it
-                    match = re.search(EMAIL_QUOTE_START_PATTERN, decoded_content)
-                    if match:
+                    if match := re.search(
+                        EMAIL_QUOTE_START_PATTERN, decoded_content
+                    ):
                         email_content = decoded_content[: match.start()]
                     else:
                         email_content = decoded_content

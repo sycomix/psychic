@@ -104,8 +104,7 @@ class StateStore:
         connector_config = None
         if len(response.data) > 0:
             is_enabled = True
-            credentials = response.data[0]["credential"]
-            if credentials:
+            if credentials := response.data[0]["credential"]:
                 custom_credentials = json.loads(response.data[0]["credential"])
             else:
                 custom_credentials = {}
@@ -123,16 +122,14 @@ class StateStore:
             .execute()
         )
 
-        connections: List[Connection] = []
-        for row in response.data:
-            connections.append(
-                Connection(
-                    account_id=row["account_id"],
-                    connector_id=row["connector_id"],
-                    metadata=row["metadata"],
-                )
+        connections: List[Connection] = [
+            Connection(
+                account_id=row["account_id"],
+                connector_id=row["connector_id"],
+                metadata=row["metadata"],
             )
-
+            for row in response.data
+        ]
         # check the settings table to check for any custom auth url
         response = (
             self.supabase.table("settings")
@@ -173,20 +170,17 @@ class StateStore:
 
         response = query.execute()
 
-        connections: List[Connection] = []
-        # Sort connections by when they were created
-        for row in sorted(
-            response.data, key=lambda x: parse(x["created_at"]), reverse=True
-        ):
-            connections.append(
-                Connection(
-                    account_id=row["account_id"],
-                    connector_id=row["connector_id"],
-                    metadata=row["metadata"],
-                    section_filters=row["section_filters"],
-                )
+        connections: List[Connection] = [
+            Connection(
+                account_id=row["account_id"],
+                connector_id=row["connector_id"],
+                metadata=row["metadata"],
+                section_filters=row["section_filters"],
             )
-
+            for row in sorted(
+                response.data, key=lambda x: parse(x["created_at"]), reverse=True
+            )
+        ]
         return connections
 
     def get_connector_credential(
@@ -295,7 +289,7 @@ class StateStore:
     def delete_connection(
         self, config: AppConfig, connector_id: ConnectorId, account_id: str
     ) -> Connection:
-        result = (
+        return (
             self.supabase.table("connections")
             .delete()
             .filter("connector_id", "eq", connector_id)
@@ -303,8 +297,6 @@ class StateStore:
             .filter("account_id", "eq", account_id)
             .execute()
         )
-
-        return result
 
     def load_credentials(
         self, config: AppConfig, connector_id: ConnectorId, account_id: str
@@ -343,14 +335,13 @@ class StateStore:
             query = query.filter("app_id", "eq", app_id_filter)
 
         response = query.execute()
-        syncs: List[Sync] = []
-        for row in response.data:
-            syncs.append(
-                Sync(
-                    app_id=row["app_id"],
-                    webhook_url=row["webhook_url"],
-                )
+        syncs: List[Sync] = [
+            Sync(
+                app_id=row["app_id"],
+                webhook_url=row["webhook_url"],
             )
+            for row in response.data
+        ]
         return syncs
 
     def save_sync_results(self, sync: Sync, results: SyncResults):

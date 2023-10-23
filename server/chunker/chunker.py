@@ -18,16 +18,16 @@ class DocumentChunker:
                 html, self.min_chunk_size, self.max_chunk_size
             )
             markdown_chunks = self.chunks_to_markdown(html_chunks)
-            for chunk in markdown_chunks:
-                chunks.append(
-                    Document(
-                        connector_id=document.connector_id,
-                        account_id=document.account_id,
-                        title=document.title,
-                        content=chunk,
-                        uri=document.uri,
-                    )
+            chunks.extend(
+                Document(
+                    connector_id=document.connector_id,
+                    account_id=document.account_id,
+                    title=document.title,
+                    content=chunk,
+                    uri=document.uri,
                 )
+                for chunk in markdown_chunks
+            )
         return chunks
 
     def html_to_chunks(self, html, min_size=500, max_size=1500):
@@ -38,7 +38,7 @@ class DocumentChunker:
 
         for top_level_elem in soup:
             if isinstance(top_level_elem, Tag):
-                for i, elem in enumerate(top_level_elem):
+                for elem in top_level_elem:
                     if isinstance(elem, Tag):
                         if skip_next:
                             skip_next = False
@@ -95,10 +95,9 @@ class DocumentChunker:
             # if the element is a paragraph, we can split it
             if elem.name == "p":
                 remaining_text = html_elem
-                while len(remaining_text) > 0:
+                while remaining_text != "":
                     if len(chunk) + len(remaining_text) <= self.max_chunk_size:
                         chunk += remaining_text
-                        remaining_text = ""
                     else:
                         # find the index to split the text while keeping it valid
                         split_index = remaining_text[
@@ -107,7 +106,7 @@ class DocumentChunker:
                         chunk += remaining_text[:split_index]
                         chunks.append(chunk)
                         chunk = remaining_text[split_index:]
-                        remaining_text = ""
+                    remaining_text = ""
             else:
                 # for non-paragraph elements, we try to keep them intact
                 if chunk:  # if there's any content in the chunk

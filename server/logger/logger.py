@@ -92,4 +92,4 @@ class Logger:
             properties["response"] = sanitize(response).dict()
         if error is not None:
             properties["error"] = str(error)
-        self.log(app_config=app_config, event="server_" + event, properties=properties)
+        self.log(app_config=app_config, event=f"server_{event}", properties=properties)

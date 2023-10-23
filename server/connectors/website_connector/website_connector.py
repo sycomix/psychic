@@ -136,14 +136,11 @@ def get_id_from_folder_name(folder_name: str, service) -> str:
             f"Multiple folders named '{folder_name}' were found. Using the first one."
         )
 
-    folder_id = folder_items[0]["id"]
-    return folder_id
+    return folder_items[0]["id"]
 
 
 def get_id_from_url(url: str):
-    # Extract the folder ID from the link
-    folder_id = re.search(r"folders/([\w-]+)", url)
-    if folder_id:
+    if folder_id := re.search(r"folders/([\w-]+)", url):
         folder_id = folder_id.group(1)
         return folder_id
     else:

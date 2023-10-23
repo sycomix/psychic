@@ -46,8 +46,6 @@ class GithubConnector(DocumentConnector):
 
         if not auth_code:
             return AuthorizationResult(authorized=False, auth_url=authorization_url)
-        pass
-
         try:
             github = OAuth2Session(client_id)
             token = github.fetch_token(
@@ -113,7 +111,7 @@ class GithubConnector(DocumentConnector):
             try:
                 decoded_content = base64.b64decode(file.content).decode()
             except Exception as e:
-                print("{} is not decodable as a string - ignoring".format(file))
+                print(f"{file} is not decodable as a string - ignoring")
                 continue
 
             documents.append(

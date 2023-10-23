@@ -42,10 +42,10 @@ def download_pdf(service, file_id) -> Optional[io.BytesIO]:
 
 def extract_pdf_text(pdf_file):
     reader = PdfReader(pdf_file)
-    text = ""
-    for page_num in range(len(reader.pages)):
-        text += reader.pages[page_num].extract_text()
-    return text
+    return "".join(
+        reader.pages[page_num].extract_text()
+        for page_num in range(len(reader.pages))
+    )
 
 
 class GoogleDriveConnector(DocumentConnector):
@@ -129,9 +129,7 @@ class GoogleDriveConnector(DocumentConnector):
 
         parser = GoogleDriveParser(service)
 
-        sections = parser.list_all_subfolders()
-
-        return sections
+        return parser.list_all_subfolders()
 
     async def load(self, connection_filter: ConnectionFilter) -> GetDocumentsResponse:
         account_id = connection_filter.account_id
@@ -197,12 +195,11 @@ class GoogleDriveConnector(DocumentConnector):
             for section in sections:
                 files.extend(parser.get_all_files(section))
 
+        elif default_filter:
+            for section in default_filter.sections:
+                files.extend(parser.get_all_files(section))
         else:
-            if default_filter:
-                for section in default_filter.sections:
-                    files.extend(parser.get_all_files(section))
-            else:
-                files = []
+            files = []
 
         documents = []
         for item in files:
@@ -215,10 +212,10 @@ class GoogleDriveConnector(DocumentConnector):
                 )
                 content = doc.decode("utf-8")
             elif mime_type == "application/pdf":
-                pdf_file = download_pdf(service, item["id"])
-                if not pdf_file:
+                if pdf_file := download_pdf(service, item["id"]):
+                    content = extract_pdf_text(pdf_file)
+                else:
                     continue
-                content = extract_pdf_text(pdf_file)
             documents.append(
                 Document(
                     title=item["name"],
@@ -250,14 +247,11 @@ def get_id_from_folder_name(folder_name: str, service) -> str:
             f"Multiple folders named '{folder_name}' were found. Using the first one."
         )
 
-    folder_id = folder_items[0]["id"]
-    return folder_id
+    return folder_items[0]["id"]
 
 
 def get_id_from_url(url: str):
-    # Extract the folder ID from the link
-    folder_id = re.search(r"folders/([\w-]+)", url)
-    if folder_id:
+    if folder_id := re.search(r"folders/([\w-]+)", url):
         folder_id = folder_id.group(1)
         return folder_id
     else:

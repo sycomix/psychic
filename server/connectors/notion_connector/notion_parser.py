@@ -20,10 +20,7 @@ class NotionParser:
             headers=self.headers,
         )
         res_json = res.json()
-        blocks = res_json.get("results")
-        if blocks:
-            return blocks
-        return []
+        return blocks if (blocks := res_json.get("results")) else []
 
     def notion_get_page(self, url: str):
         # ID is the last part of the url
@@ -32,8 +29,7 @@ class NotionParser:
         if "-" in page_id:
             page_id = page_id.split("-")[-1]
         res = requests.get(f"{BASE_URL}/v1/pages/{page_id}", headers=self.headers)
-        res_json = res.json()
-        return res_json
+        return res.json()
 
     def get_documents_in_section(self, page_id) -> List[Dict]:
         unprocessed_pages = [page_id]
@@ -95,7 +91,7 @@ class NotionParser:
             properties_html = self.parse_properties(page)
             database_ids = self.parse_database_ids(blocks)
             html = f"<div><h1>{title}</h1>{properties_html}{html}</div>"
-            return tuple([{"title": title, "content": html, "uri": url}, database_ids])
+            return {"title": title, "content": html, "uri": url}, database_ids
 
         return None
 
@@ -106,91 +102,69 @@ class NotionParser:
         print(res_json)
         pages = res_json.get("results")
         next_cursor = res_json.get("next_cursor")
-        if pages:
-            return pages, next_cursor
-        return [], None
+        return (pages, next_cursor) if pages else ([], None)
 
     def parse_property(self, property):
         result = ""
         if property.get("type") == "date":
-            date = property.get("date")
-            if date:
+            if date := property.get("date"):
                 result = date.get("start")
         elif property.get("type") == "rich_text":
-            rich_text = property.get("rich_text")
-            if rich_text:
+            if rich_text := property.get("rich_text"):
                 result = self.parse_rich_text(rich_text)
         elif property.get("type") == "select":
-            select = property.get("select")
-            if select:
+            if select := property.get("select"):
                 result = select.get("name")
         elif property.get("type") == "multi_select":
-            multi_select = property.get("multi_select")
-            if multi_select:
+            if multi_select := property.get("multi_select"):
                 result = ", ".join(
                     [item.get("name") for item in multi_select if item.get("name")]
                 )
         elif property.get("type") == "number":
-            number = property.get("number")
-            if number:
+            if number := property.get("number"):
                 result = number
         elif property.get("type") == "title":
-            title = property.get("title")
-            if title:
+            if title := property.get("title"):
                 result = self.parse_rich_text(title)
         elif property.get("type") == "email":
-            email = property.get("email")
-            if email:
+            if email := property.get("email"):
                 result = email
         elif property.get("type") == "phone_number":
-            phone_number = property.get("phone_number")
-            if phone_number:
+            if phone_number := property.get("phone_number"):
                 result = phone_number
         elif property.get("type") == "url":
-            url = property.get("url")
-            if url:
+            if url := property.get("url"):
                 result = url
         elif property.get("type") == "checkbox":
-            checkbox = property.get("checkbox")
-            if checkbox:
+            if checkbox := property.get("checkbox"):
                 result = checkbox
         elif property.get("type") == "created_time":
-            created_time = property.get("created_time")
-            if created_time:
+            if created_time := property.get("created_time"):
                 result = created_time
         elif property.get("type") == "created_by":
-            created_by = property.get("created_by")
-            if created_by:
+            if created_by := property.get("created_by"):
                 result = created_by.get("name")
         elif property.get("type") == "last_edited_time":
-            last_edited_time = property.get("last_edited_time")
-            if last_edited_time:
+            if last_edited_time := property.get("last_edited_time"):
                 result = last_edited_time
         elif property.get("type") == "last_edited_by":
-            last_edited_by = property.get("last_edited_by")
-            if last_edited_by:
+            if last_edited_by := property.get("last_edited_by"):
                 result = last_edited_by.get("name")
         elif property.get("type") == "formula":
-            formula = property.get("formula")
-            if formula:
+            if formula := property.get("formula"):
                 result = formula.get("string")
         else:
             print(f"Property type {property.get('type')} not supported")
             return ""
 
-        if result:
-            return result
-        return ""
+        return result if result else ""
 
     def parse_database_ids(self, blocks):
-        database_ids = []
-
-        for block in blocks:
-            # check if type is child_database
-            if block.get("type") == "child_database":
-                database_ids.append(block.get("id"))
-
-        return database_ids
+        return [
+            block.get("id")
+            for block in blocks
+            if block.get("type") == "child_database"
+        ]
 
     def parse_properties(self, page):
         html = ""
@@ -199,10 +173,9 @@ class NotionParser:
         # check to see if properties exists and there is more than just the title
 
         if properties and len(properties) > 1:
-            html = "<table>"
             keys = list(properties.keys())
 
-            html += "<thead><tr>"
+            html = "<table>" + "<thead><tr>"
             for key in keys:
                 # exclude the title
                 if properties[key].get("title"):
@@ -224,8 +197,7 @@ class NotionParser:
         if not properties:
             return title
 
-        title_content = properties.get("title")
-        if title_content:
+        if title_content := properties.get("title"):
             if len(title_content.get("title")) > 0:
                 title = title_content.get("title")[0].get("text").get("content")
         else:
@@ -248,17 +220,11 @@ class NotionParser:
                 paragraph_html, new_index = self.parse_paragraph(i, blocks)
                 html += paragraph_html
                 i = new_index
-            elif (
-                block_type == "heading_1"
-                or block_type == "heading_2"
-                or block_type == "heading_3"
-            ):
+            elif block_type in ["heading_1", "heading_2", "heading_3"]:
                 heading_html, new_index = self.parse_heading(i, blocks)
                 html += heading_html
                 i = new_index
-            elif (
-                block_type == "bulleted_list_item" or block_type == "numbered_list_item"
-            ):
+            elif block_type in ["bulleted_list_item", "numbered_list_item"]:
                 list_html, new_index = self.parse_list(i, blocks)
                 html += list_html
                 i = new_index
@@ -295,11 +261,7 @@ class NotionParser:
         has_children = block.get("has_children")
         block_content = block.get(block_type)
         rich_text = block_content.get("rich_text")
-        assert (
-            block_type == "heading_1"
-            or block_type == "heading_2"
-            or block_type == "heading_3"
-        )
+        assert block_type in ["heading_1", "heading_2", "heading_3"]
 
         if block_type == "heading_1":
             block_type = "h1"
@@ -319,13 +281,9 @@ class NotionParser:
     def parse_list(self, i, blocks):
         block = blocks[i]
         block_type = block.get("type")
-        assert block_type == "bulleted_list_item" or block_type == "numbered_list_item"
+        assert block_type in ["bulleted_list_item", "numbered_list_item"]
 
-        if block_type == "bulleted_list_item":
-            html_list = "ul"
-        else:
-            html_list = "ol"
-
+        html_list = "ul" if block_type == "bulleted_list_item" else "ol"
         html = f"<{html_list}>"
         while i < len(blocks) and blocks[i].get("type") == block_type:
             block = blocks[i]
@@ -334,7 +292,7 @@ class NotionParser:
             block_content = block.get(block_type)
             rich_text = block_content.get("rich_text")
 
-            html += "<li>" + self.parse_rich_text(rich_text)
+            html += f"<li>{self.parse_rich_text(rich_text)}"
             if has_children:
                 children = self.notion_get_blocks(block_id)
                 html += self.parse_notion_blocks(children)
@@ -397,8 +355,7 @@ class NotionParser:
             elif item.get("type") == "mention" and item.get("mention"):
                 mention = item.get("mention")
                 if mention.get("type") == "date":
-                    date = mention.get("date")
-                    if date:
+                    if date := mention.get("date"):
                         result.append(date.get("start"))
 
         return " ".join(result)

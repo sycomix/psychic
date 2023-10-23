@@ -21,9 +21,7 @@ import PyPDF2
 
 def read_docx(file_path):
     doc = DocxDocument(file_path)
-    full_text = []
-    for para in doc.paragraphs:
-        full_text.append(para.text)
+    full_text = [para.text for para in doc.paragraphs]
     return "\n".join(full_text)
 
 
@@ -112,9 +110,7 @@ class SharepointConnector(DocumentConnector):
             raise Exception("Connector is not enabled")
 
         if not auth_code:
-            auth_url = (
-                f"https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize"
-            )
+            auth_url = "https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize"
             params = {
                 "response_type": "code",
                 "redirect_uri": redirect_uri,
@@ -150,7 +146,7 @@ class SharepointConnector(DocumentConnector):
             }
 
             response = requests.post(
-                f"https://login.microsoftonline.com/common/oauth2/v2.0/token",
+                "https://login.microsoftonline.com/common/oauth2/v2.0/token",
                 headers=headers,
                 data=data,
             )
@@ -166,13 +162,9 @@ class SharepointConnector(DocumentConnector):
             )
             response_json = response.json()
 
-            org_name = None
-
             orgs = response_json.get("value")
 
-            if len(orgs) > 0:
-                org_name = orgs[0].get("displayName")
-
+            org_name = orgs[0].get("displayName") if len(orgs) > 0 else None
         except Exception as e:
             print(e)
             raise Exception("Unable to get access token with code")
@@ -215,7 +207,7 @@ class SharepointConnector(DocumentConnector):
 
         # check if access token is expired and refresh it
 
-        headers = {"Authorization": "Bearer " + access_token}
+        headers = {"Authorization": f"Bearer {access_token}"}
 
         response = requests.get(
             "https://graph.microsoft.com/v1.0/sites?search=*", headers=headers
@@ -231,7 +223,7 @@ class SharepointConnector(DocumentConnector):
                 "client_secret": client_secret,
             }
             response = requests.post(
-                f"https://login.microsoftonline.com/common/oauth2/v2.0/token",
+                "https://login.microsoftonline.com/common/oauth2/v2.0/token",
                 headers=headers,
                 data=data,
             )
@@ -245,7 +237,7 @@ class SharepointConnector(DocumentConnector):
                 metadata={},
             )
             access_token = creds.get("access_token")
-            headers = {"Authorization": "Bearer " + access_token}
+            headers = {"Authorization": f"Bearer {access_token}"}
             response = requests.get(
                 "https://graph.microsoft.com/v1.0/sites?search=*", headers=headers
             )

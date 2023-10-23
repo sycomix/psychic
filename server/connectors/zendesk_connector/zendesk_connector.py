@@ -134,8 +134,7 @@ class ZendeskConnector(DocumentConnector, TicketConnector):
 
         subdomain = connection.metadata["subdomain"]
         parser = ZendeskParser(subdomain=subdomain, credential=credential_json)
-        sections = parser.list_sections()
-        return sections
+        return parser.list_sections()
 
     async def load(self, connection_filter: ConnectionFilter) -> GetDocumentsResponse:
         account_id = connection_filter.account_id
